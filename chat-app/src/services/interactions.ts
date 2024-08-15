@@ -20,8 +20,21 @@ class Interactions extends Api {
     return response.data.message;
   }
 
+  public markMessagesAsRead = async (friendId: number) => {
+    const accessToken = this.getAccessToken();
+    const endpoint = `/chats/chat/${friendId}/mark-all-as-read/`;
+    const config = {
+        headers: {
+            authorization: `Bearer ${accessToken}`
+        }
+    }
+    const response = await this.post(endpoint, {}, config);
+    return response.data;
+  }
+
 }
 
 export const {
-  sendFriendRequest
+  sendFriendRequest,
+  markMessagesAsRead,
 } = new Interactions();

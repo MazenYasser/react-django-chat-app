@@ -3,20 +3,30 @@
 import { AuthContext } from '../../context/AuthContext';
 import { FC, useContext, useEffect } from 'react';
 import { useState } from 'react';
-import { Box, List, ListItem, ListItemText, IconButton, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import { Box, List, ListItemButton, ListItemText, IconButton, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SendIcon from '@mui/icons-material/Send';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { JSX } from 'react';
-import { sendFriendRequest } from '../../services/interactions';
+import { sendFriendRequest, markMessagesAsRead } from '../../services/interactions';
 import { toast } from 'react-toastify';
-import { getFriendList, getChatLog } from '../../services/data';
+import { getFriendList, getChatLog, getUnreadMessages } from '../../services/data';
+
 
 interface User {
   id : number;
   first_name : string;
   last_name : string;
   email : string;
+}
+
+interface Message {
+  sender : number;
+  sender_name : string;
+  receiver : number;
+  content : string;
+  timestamp : string;
+  is_read : boolean;
 }
 
 const theme = createTheme({
@@ -47,12 +57,15 @@ const theme = createTheme({
     };
     const [friends, setFriends] = useState<User[]>([]);
     const [newFriend, setNewFriend] = useState<string>('');
-    const [chatMessages, setChatMessages] = useState<string[]>([]);
+    const [chatMessages, setChatMessages] = useState<Message[]>([]);
     const [openDialog, setOpenDialog] = useState<boolean>(false);
     const [newMessage, setNewMessage] = useState<string>('');
     const [socket, setSocket] = useState<WebSocket>();
     const [onlineStatusSocket, setOnlineStatusSocket] = useState<WebSocket>();
     const [friendId, setFriendId] = useState<number>(0);
+    const [unreadFriendsIds, setUnreadFriendsIds] = useState<number[]>([]);
+    const [unreadChat, setUnreadChat] = useState<boolean>(true);
+    
     
     useEffect(() => {
       const fetchFriends = async () => {
@@ -62,6 +75,9 @@ const theme = createTheme({
       fetchFriends();
     }, [])
 
+    const convertDateFormat = (date: string) => {
+      return new Date(date).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).replace(/ GMT.+/, '')
+    }
 
     const handleAddFriend = async (to_user: string) => {
       const response = await sendFriendRequest(to_user);
@@ -78,7 +94,9 @@ const theme = createTheme({
 
     const handleFriendClick = (friendId: number) => {
       setFriendId(friendId);
-    }
+      setUnreadChat(false);
+  };
+  
 
     useEffect(() => {
         const token = sessionStorage.getItem('authorization');
@@ -88,6 +106,10 @@ const theme = createTheme({
         // Handle the connection opening
         onlineStatusSocket.onopen = async () => {
           console.log('Online status socket: Connected');
+          const unreadMessages : Message[] = await getUnreadMessages();
+          unreadMessages.forEach(message => {
+              setUnreadFriendsIds(prevIds => [...prevIds, message.sender]);
+          });
         };
     
         // Listen for incoming messages
@@ -121,9 +143,10 @@ const theme = createTheme({
         newSocket.onopen = async () => {
           console.log('WebSocket connected');
           // To be re-enabled when backend db for message is implemented
-          // const chatLog = await getChatLog(friendId);
-          // setChatMessages([]);
-          // setChatMessages(chatLog);
+          const chatLog = await getChatLog(friendId);
+          setChatMessages([]);
+          setChatMessages(chatLog);
+          await markMessagesAsRead(friendId);
         };
     
         // Listen for incoming messages
@@ -163,9 +186,9 @@ const theme = createTheme({
             
             <List>
               {friends.map((friend, index) => (
-                <ListItem button key={index} onClick={() => handleFriendClick(friend.id)}>
-                  <ListItemText primary={friend.first_name + ' ' + friend.last_name} />
-                </ListItem>
+                <ListItemButton key={index} onClick={() => handleFriendClick(friend.id)} style={friendId === friend.id ? { backgroundColor: theme.palette.primary.dark } : {}}>
+                  <ListItemText primary={`${friend.first_name} ${friend.last_name} ${unreadFriendsIds.includes(friend.id) && unreadChat ? '*' : ''}`} />
+                </ListItemButton>
               ))}
             </List>
             
@@ -175,8 +198,10 @@ const theme = createTheme({
           <Box flexGrow={1} p={2} display="flex" flexDirection="column">
             <Typography variant="h6" gutterBottom>Chat</Typography>
             <Box flexGrow={1} bgcolor="white" p={2} borderRadius={2} overflow="auto">
-              {chatMessages.map((message, index) => (
-                <Typography key={index} gutterBottom>{message}</Typography>
+              {chatMessages.map((messageData, index) => (
+                <Typography key={index} gutterBottom>
+                  {convertDateFormat(messageData.timestamp)} | {messageData.sender_name} :  {messageData.content}
+                </Typography>
               ))}
             </Box>
             <Box display="flex" mt={2}>
