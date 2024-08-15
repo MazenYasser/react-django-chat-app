@@ -151,9 +151,11 @@ const theme = createTheme({
     
         // Listen for incoming messages
         newSocket.onmessage = (event) => {
-          console.log('Message from server:', event.data);
-          setChatMessages((prevMessages) => [...prevMessages, event.data]);
+          const messageData = JSON.parse(event.data)
+          console.log('Message from server:', messageData);
+          setChatMessages((prevMessages) => [...prevMessages, messageData.message]);
         };
+
     
         // Handle the connection closing
         newSocket.onclose = () => {
