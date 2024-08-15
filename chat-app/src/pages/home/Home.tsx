@@ -51,6 +51,7 @@ const theme = createTheme({
     const [openDialog, setOpenDialog] = useState<boolean>(false);
     const [newMessage, setNewMessage] = useState<string>('');
     const [socket, setSocket] = useState<WebSocket>();
+    const [onlineStatusSocket, setOnlineStatusSocket] = useState<WebSocket>();
     const [friendId, setFriendId] = useState<number>(0);
     
     useEffect(() => {
@@ -78,6 +79,29 @@ const theme = createTheme({
     const handleFriendClick = (friendId: number) => {
       setFriendId(friendId);
     }
+
+    useEffect(() => {
+        const token = sessionStorage.getItem('authorization');
+        const onlineStatusSocket = new WebSocket(`ws://127.0.0.1:8000/status/?token=${token}`);
+        setOnlineStatusSocket(onlineStatusSocket);
+    
+        // Handle the connection opening
+        onlineStatusSocket.onopen = async () => {
+          console.log('Online status socket: Connected');
+        };
+    
+        // Listen for incoming messages
+        onlineStatusSocket.onmessage = (event) => {
+          console.log('Message from online status server:', event.data);
+        };
+    
+        // Handle the connection closing
+        onlineStatusSocket.onclose = () => {
+          console.log('Online status socket: Disconnected');
+        };
+
+    }, []); 
+    
 
     useEffect(() => {
       if (socket) {
