@@ -1,5 +1,5 @@
 import axios from 'axios';
-// import { toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 
 // Types
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
@@ -102,21 +102,21 @@ class Api {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private handleError = (error: any): void => {
-    if (!error.response) {
-      // Network error
-      console.error('Network error:', error.message);
-
-    } else if (error.response && error.response.data && error.response.data.message) {
-      // Server error message
-      console.error(error.response.data.message);
-
-    } else {
-      // General error
-      console.error('Error:', error.message || error);
-
-    }
-  };
+    private handleError = (error: any): void => {
+      if (!error.response) {
+        // Network error
+        console.error('Network error:', error.message);
+        toast.error('Network error. Please check your internet connection.');
+      } else if (error.response && error.response.data && error.response.data.message) {
+        // Server error message
+        console.error(error.response.data.message);
+        toast.error(error.response.data.message);
+      } else {
+        // General error
+        console.error('Error:', error.message || error);
+        toast.error(`Error: ${error.message || error}`);
+      }
+    };
 }
 
 export default Api;
