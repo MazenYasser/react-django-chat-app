@@ -3,7 +3,7 @@
 import { AuthContext } from '../../context/AuthContext';
 import { FC, useContext, useEffect } from 'react';
 import { useState } from 'react';
-import { Box, List, ListItemButton, ListItemText, ListItem, IconButton, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import { Box, List, ListItemButton, ListItemText, ListItem, IconButton, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Badge } from '@mui/material';
 // import AddIcon from '@mui/icons-material/Add';
 import SendIcon from '@mui/icons-material/Send';
 import { PeopleAlt, PersonAddAlt1, Done, Clear } from '@mui/icons-material';
@@ -203,7 +203,15 @@ const theme = createTheme({
           <Box width="25%" bgcolor="primary.light" p={2}>
             <Typography variant="h6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} gutterBottom>Hello, {userData?.first_name} {userData?.last_name}
               <IconButton color="primary" onClick={() => setOpenFriendRequestsModal(true)}>
+              <Badge
+                badgeContent={pendingFriendRequests.length}
+                max={99}
+                color="error"
+                invisible={pendingFriendRequests.length === 0}  // Only show badge if there are pending requests
+                overlap="circular"
+              >
                 <PeopleAlt />
+              </Badge>
               </IconButton>
             </Typography>
             
@@ -269,7 +277,7 @@ const theme = createTheme({
 
         {/* Friend Requests Dialog */}
         <Dialog open={openFriendRequestsModal} onClose={() => setOpenFriendRequestsModal(false)}>
-          <DialogTitle>Pending Friend Requests</DialogTitle>
+          <DialogTitle>{pendingFriendRequests.length === 0 ? 'No Pending Friend Requests' : "Pending Friend Requests"}</DialogTitle>
           <DialogContent>
             <List>
               {pendingFriendRequests.map((friendRequest, index) => (
