@@ -3,14 +3,16 @@
 import { AuthContext } from '../../context/AuthContext';
 import { FC, useContext, useEffect } from 'react';
 import { useState } from 'react';
-import { Box, List, ListItemButton, ListItemText, IconButton, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { Box, List, ListItemButton, ListItemText, ListItem, IconButton, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+// import AddIcon from '@mui/icons-material/Add';
 import SendIcon from '@mui/icons-material/Send';
+import { PeopleAlt, PersonAddAlt1, Done, Clear } from '@mui/icons-material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { JSX } from 'react';
 import { sendFriendRequest, markMessagesAsRead } from '../../services/interactions';
 import { toast } from 'react-toastify';
-import { getFriendList, getChatLog, getUnreadMessages } from '../../services/data';
+import { getFriendList, getChatLog, getUnreadMessages, getPendingFriendRequests } from '../../services/data';
+import { updateFriendRequestStatus } from '../../services/interactions';
 
 
 interface User {
@@ -27,6 +29,12 @@ interface Message {
   content : string;
   timestamp : string;
   is_read : boolean;
+}
+
+interface PendingFriendRequest {
+  id : number;
+  from_user: string;
+  to_user: number;
 }
 
 const theme = createTheme({
@@ -56,23 +64,33 @@ const theme = createTheme({
     };
     const [friends, setFriends] = useState<User[]>([]);
     const [newFriend, setNewFriend] = useState<string>('');
+    const [pendingFriendRequests, setPendingFriendRequests] = useState<PendingFriendRequest[]>([]);
     const [chatMessages, setChatMessages] = useState<Message[]>([]);
-    const [openDialog, setOpenDialog] = useState<boolean>(false);
+    const [openAddFriendModal, setOpenAddFriendModal] = useState<boolean>(false);
+    const [openFriendRequestsModal, setOpenFriendRequestsModal] = useState<boolean>(false);
     const [newMessage, setNewMessage] = useState<string>('');
     const [socket, setSocket] = useState<WebSocket>();
-    const [onlineStatusSocket, setOnlineStatusSocket] = useState<WebSocket>();
     const [friendId, setFriendId] = useState<number>(0);
     const [unreadFriendsIds, setUnreadFriendsIds] = useState<number[]>([]);
     const [unreadChat, setUnreadChat] = useState<boolean>(true);
-    
-    
+
+
+
+    const fetchFriends = async () => {
+      const friends = await getFriendList();
+      setFriends(friends);
+    };
+
+    const fetchPendingFriendRequests = async () => {
+      const friendRequests = await getPendingFriendRequests();
+      setPendingFriendRequests(friendRequests);
+    };
+
     useEffect(() => {
-      const fetchFriends = async () => {
-        const friends = await getFriendList();
-        setFriends(friends);
-      };
       fetchFriends();
+      fetchPendingFriendRequests();
     }, [])
+
 
     const convertDateFormat = (date: string) => {
       return new Date(date).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).replace(/ GMT.+/, '')
@@ -82,6 +100,13 @@ const theme = createTheme({
       const response = await sendFriendRequest(to_user);
       toast.success(response);
     };
+
+    const handleUpdateFriendRequestStatus = async(friendRequestId: number, status: "ACCEPTED" | "REJECTED") => {
+      const response = await updateFriendRequestStatus(friendRequestId, status);
+      toast.success(response);
+      fetchFriends();
+      fetchPendingFriendRequests();
+    }
 
     const sendMessage = () => {
       console.log("newMessage: ", newMessage)
@@ -100,7 +125,6 @@ const theme = createTheme({
     useEffect(() => {
         const token = sessionStorage.getItem('authorization');
         const onlineStatusSocket = new WebSocket(`ws://127.0.0.1:8000/status/?token=${token}`);
-        setOnlineStatusSocket(onlineStatusSocket);
     
         // Handle the connection opening
         onlineStatusSocket.onopen = async () => {
@@ -177,11 +201,16 @@ const theme = createTheme({
         <Box display="flex" height="100vh" bgcolor="secondary.light" flexDirection="row">
           {/* Friend List */}
           <Box width="25%" bgcolor="primary.light" p={2}>
-            <Typography variant="h6" gutterBottom>Hello, {userData?.first_name} {userData?.last_name}</Typography>
+            <Typography variant="h6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} gutterBottom>Hello, {userData?.first_name} {userData?.last_name}
+              <IconButton color="primary" onClick={() => setOpenFriendRequestsModal(true)}>
+                <PeopleAlt />
+              </IconButton>
+            </Typography>
+            
             <Typography variant="h6" color="primary.contrastText" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Friends</span>
-                <IconButton color="primary" onClick={() => setOpenDialog(true)}>
-                  <AddIcon />
+                <IconButton color="primary" onClick={() => setOpenAddFriendModal(true)}>
+                <PersonAddAlt1 />
                 </IconButton>
             </Typography>
             
@@ -215,7 +244,7 @@ const theme = createTheme({
         </Box>
   
         {/* Add Friend Dialog */}
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <Dialog open={openAddFriendModal} onClose={() => setOpenAddFriendModal(false)}>
           <DialogTitle>Add New Friend</DialogTitle>
           <DialogContent>
             <TextField
@@ -229,7 +258,7 @@ const theme = createTheme({
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenDialog(false)} color="primary">
+            <Button onClick={() => setOpenAddFriendModal(false)} color="primary">
               Cancel
             </Button>
             <Button onClick={() => handleAddFriend(newFriend)} color="primary">
@@ -237,6 +266,33 @@ const theme = createTheme({
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Friend Requests Dialog */}
+        <Dialog open={openFriendRequestsModal} onClose={() => setOpenFriendRequestsModal(false)}>
+          <DialogTitle>Pending Friend Requests</DialogTitle>
+          <DialogContent>
+            <List>
+              {pendingFriendRequests.map((friendRequest, index) => (
+                <ListItem key={index}>
+                  <ListItemText primary={`${friendRequest.from_user}`} />
+                  <Button onClick={() => handleUpdateFriendRequestStatus(friendRequest.id, "ACCEPTED")} color="primary">
+                      <Done />
+                  </Button>
+                    <Button onClick={() => handleUpdateFriendRequestStatus(friendRequest.id, "REJECTED")} color="primary">
+                      <Clear />
+                  </Button>
+                </ListItem>
+              ))}
+            </List>
+          </DialogContent>
+          <DialogActions>
+          <Button onClick={() => setOpenFriendRequestsModal(false)} color="primary">
+            Close
+          </Button>
+          </DialogActions>
+        </Dialog>
+
+
       </ThemeProvider>
     );
   };

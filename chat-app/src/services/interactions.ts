@@ -20,6 +20,22 @@ class Interactions extends Api {
     return response.data.message;
   }
 
+  public updateFriendRequestStatus = async (friendRequestId: number, status: "ACCEPTED" | "REJECTED") => {
+    const accessToken = this.getAccessToken();
+    const endpoint = `/friend-requests/`;
+    const config = {
+        headers: {
+            authorization: `Bearer ${accessToken}`
+        }
+    }
+    const body = {
+        "status": status,
+        "friend_request_id": friendRequestId
+    }
+    const response = await this.patch(endpoint, body, config);
+    return response.data.message;
+  }
+
   public markMessagesAsRead = async (friendId: number) => {
     const accessToken = this.getAccessToken();
     const endpoint = `/chats/chat/${friendId}/mark-all-as-read/`;
@@ -37,4 +53,5 @@ class Interactions extends Api {
 export const {
   sendFriendRequest,
   markMessagesAsRead,
+  updateFriendRequestStatus,
 } = new Interactions();

@@ -18,6 +18,19 @@ class Data extends Api {
     return response.data;
   }
 
+  public getPendingFriendRequests = async () => {
+    const accessToken = this.getAccessToken();
+    const endpoint = `/friend-requests/`;
+    const config = {
+        headers: {
+            authorization: `Bearer ${accessToken}`
+        }
+    }
+
+    const response = await this.get(endpoint, config);
+    return response.data;
+  }
+
   public getChatLog = async (friendId: number) => {
     const accessToken = this.getAccessToken();
     const endpoint = `/chats/chat/${friendId}/`;
@@ -51,4 +64,5 @@ export const {
   getFriendList,
   getChatLog,
   getUnreadMessages,
+  getPendingFriendRequests,
 } = new Data();
