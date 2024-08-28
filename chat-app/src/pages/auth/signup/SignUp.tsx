@@ -12,7 +12,9 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-
+import { signup } from '../../../services/auth';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 // TODO remove, this demo shouldn't need to reset the theme.
 const defaultTheme = createTheme({
@@ -25,13 +27,25 @@ const defaultTheme = createTheme({
 });
 
 export default function SignUp() {
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const navigate = useNavigate();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     console.log({
       email: data.get('email'),
       password: data.get('password'),
     });
+    const response = await signup(data.get('userName') as string,
+                                  data.get('email') as string,
+                                  data.get('password') as string, 
+                                  data.get('firstName') as string, 
+                                  data.get('lastName') as string
+                                );
+    if (response.status === 201) {
+      navigate('/login');
+      toast.success('Account created successfully!');
+    }
+    
   };
 
   return (
@@ -117,7 +131,7 @@ export default function SignUp() {
             </Button>
             <Grid container justifyContent="center">
               <Grid item>
-                <Link href="#" variant="body2">
+                <Link href="/login" variant="body2">
                   Already have an account? Sign in
                 </Link>
               </Grid>

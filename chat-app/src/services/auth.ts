@@ -5,9 +5,9 @@ class Auth extends Api {
     super('');
   }
 
-  public signup = async (username: string, email: string, password: string, firstName: string, lastName: string) => {
+  public signup = async (username: string, email: string, password: string, first_name: string, last_name: string) => {
     const endpoint = `/users/`;
-    const data = { username, email, password, firstName, lastName };
+    const data = { username, email, password, first_name, last_name };
 
     const response = await this.post(endpoint, data);
 

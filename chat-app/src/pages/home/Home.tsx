@@ -41,8 +41,7 @@ const theme = createTheme({
 });
 
   const Home: FC = () : JSX.Element => {
-    const { logout, userData } = useContext(AuthContext);
-    console.log("userData: ", userData)
+    const { logout, userData } = useContext(AuthContext); 
 
     useEffect(() => {
       if (!userData) {
