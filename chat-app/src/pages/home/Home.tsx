@@ -1,8 +1,7 @@
 // chat-app\src\pages\home\Home.tsx
 // import Container from '@mui/material/Container';
 import { AuthContext } from '../../context/AuthContext';
-import { FC, useContext, useEffect } from 'react';
-import { useState } from 'react';
+import { FC, useContext, useEffect, useRef, useState } from 'react';
 import { Box, List, ListItemButton, ListItemText, ListItem, IconButton, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Badge } from '@mui/material';
 // import AddIcon from '@mui/icons-material/Add';
 import SendIcon from '@mui/icons-material/Send';
@@ -14,6 +13,7 @@ import { toast } from 'react-toastify';
 import { getFriendList, getChatLog, getUnreadMessages, getPendingFriendRequests } from '../../services/data';
 import { updateFriendRequestStatus } from '../../services/interactions';
 import MessageBox from '../../components/MessageBox/MessageBox';
+
 
 interface User {
   id : number;
@@ -69,7 +69,7 @@ const theme = createTheme({
     const [friendId, setFriendId] = useState<number>(0);
     const [unreadFriendsIds, setUnreadFriendsIds] = useState<number[]>([]);
     const [unreadChat, setUnreadChat] = useState<boolean>(true);
-
+    const chatBoxRef = useRef<HTMLDivElement>(null);
 
 
     const fetchFriends = async () => {
@@ -110,6 +110,9 @@ const theme = createTheme({
         console.log("sending message: ", JSON.stringify({ "sender": userData?.id, "receiver": friendId, "message": newMessage }))
         socket.send(JSON.stringify({ "sender": userData?.id, "receiver": friendId, "message": newMessage }));
       }
+      setTimeout(() => {
+        chatBoxRef.current?.scrollTo(0, chatBoxRef.current.scrollHeight);
+      }, 250); // Add a small delay to ensure the scroll position is update
     };
 
     const handleFriendClick = (friendId: number) => {
@@ -242,7 +245,7 @@ const theme = createTheme({
           {/* Chat Box */}
           <Box flexGrow={1} p={2} display="flex" flexDirection="column">
             <Typography variant="h6" gutterBottom>Chat</Typography>
-            <Box flexGrow={1} bgcolor="white" p={2} borderRadius={2} overflow="auto">
+            <Box flexGrow={1} bgcolor="white" p={2} borderRadius={2} overflow="auto" ref={chatBoxRef}>
               {chatMessages.map((messageData, index) => (
                 <MessageBox
                 key={index}
@@ -251,9 +254,6 @@ const theme = createTheme({
                 timestamp={convertDateFormat(messageData.timestamp)}
                 isCurrentUser={messageData.sender === userData?.id}
             />
-                // <Typography key={index} gutterBottom>
-                //   {convertDateFormat(messageData.timestamp)} | {messageData.sender_name} :  {messageData.content}
-                // </Typography>
               ))}
             </Box>
             <Box display="flex" mt={2}>
