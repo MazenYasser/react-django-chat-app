@@ -110,6 +110,7 @@ const theme = createTheme({
         console.log("sending message: ", JSON.stringify({ "sender": userData?.id, "receiver": friendId, "message": newMessage }))
         socket.send(JSON.stringify({ "sender": userData?.id, "receiver": friendId, "message": newMessage }));
       }
+      setNewMessage('');
       setTimeout(() => {
         chatBoxRef.current?.scrollTo(0, chatBoxRef.current.scrollHeight);
       }, 250); // Add a small delay to ensure the scroll position is update
@@ -207,7 +208,7 @@ const theme = createTheme({
       <ThemeProvider theme={theme}>
         <Box display="flex" height="100vh" bgcolor="secondary.light" flexDirection="row">
           {/* Friend List */}
-          <Box width="25%" bgcolor="primary.light" p={2}>
+          <Box width="25%" bgcolor="primary.light" p={2} sx={{ borderRadius: '10px' }}>
             <Typography variant="h6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} gutterBottom>Hello, {userData?.first_name} {userData?.last_name}
               <IconButton color="primary" onClick={() => setOpenFriendRequestsModal(true)}>
               <Badge
@@ -231,8 +232,15 @@ const theme = createTheme({
             
             <List>
               {friends.map((friend, index) => (
-                <ListItemButton key={index} onClick={() => handleFriendClick(friend.id)} style={friendId === friend.id ? { backgroundColor: theme.palette.primary.dark } : {}}>
-                  <ListItemText primary={`${friend.first_name} ${friend.last_name}`} />
+                <ListItemButton
+                  key={index}
+                  onClick={() => handleFriendClick(friend.id)}
+                  sx={{
+                    backgroundColor: friendId === friend.id ? theme.palette.primary.dark : 'transparent',
+                    borderRadius: '10px',
+                  }}
+                >
+                  <ListItemText  primary={`${friend.first_name} ${friend.last_name}`} />
                   {unreadFriendsIds.includes(friend.id) && unreadChat && <Circle color="error" style={{ width: '10px', height: '10px' }}/>}
                 </ListItemButton>
               ))}
@@ -257,8 +265,8 @@ const theme = createTheme({
               ))}
             </Box>
             <Box display="flex" mt={2}>
-              <TextField fullWidth variant="outlined" label="Type a message" onChange={(e) => setNewMessage(e.target.value)} />
-              <IconButton color="primary" onClick={sendMessage}>
+              <TextField value={newMessage} fullWidth variant="outlined" label="Type a message" onChange={(e) => setNewMessage(e.target.value)} />
+              <IconButton color="primary"  onClick={sendMessage}>
                 <SendIcon />
               </IconButton>
             </Box>
