@@ -6,14 +6,14 @@ import { useState } from 'react';
 import { Box, List, ListItemButton, ListItemText, ListItem, IconButton, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Badge } from '@mui/material';
 // import AddIcon from '@mui/icons-material/Add';
 import SendIcon from '@mui/icons-material/Send';
-import { PeopleAlt, PersonAddAlt1, Done, Clear } from '@mui/icons-material';
+import { PeopleAlt, PersonAddAlt1, Done, Clear, Circle } from '@mui/icons-material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { JSX } from 'react';
 import { sendFriendRequest, markMessagesAsRead } from '../../services/interactions';
 import { toast } from 'react-toastify';
 import { getFriendList, getChatLog, getUnreadMessages, getPendingFriendRequests } from '../../services/data';
 import { updateFriendRequestStatus } from '../../services/interactions';
-
+import MessageBox from '../../components/MessageBox/MessageBox';
 
 interface User {
   id : number;
@@ -54,14 +54,10 @@ const theme = createTheme({
     useEffect(() => {
       if (!userData) {
         logout();
+        toast.warn('Please login first!');
       }
     }, [userData, logout])
     
-    
-
-    const handleLogout = () => {
-      logout();
-    };
     const [friends, setFriends] = useState<User[]>([]);
     const [newFriend, setNewFriend] = useState<string>('');
     const [pendingFriendRequests, setPendingFriendRequests] = useState<PendingFriendRequest[]>([]);
@@ -138,6 +134,15 @@ const theme = createTheme({
         // Listen for incoming messages
         onlineStatusSocket.onmessage = (event) => {
           console.log('Message from online status server:', event.data);
+          const eventData = JSON.parse(event.data);
+          if (eventData.notification_type === 'friend_request') {
+            fetchPendingFriendRequests();
+            toast.info(eventData.notification);
+          }
+          if (eventData.notification_type === 'chat_message') {
+            setUnreadFriendsIds(prevIds => [...prevIds, eventData.sender]);
+            setUnreadChat(true);
+          }
         };
     
         // Handle the connection closing
@@ -165,7 +170,6 @@ const theme = createTheme({
         // Handle the connection opening
         newSocket.onopen = async () => {
           console.log('WebSocket connected');
-          // To be re-enabled when backend db for message is implemented
           const chatLog = await getChatLog(friendId);
           setChatMessages([]);
           setChatMessages(chatLog);
@@ -225,11 +229,14 @@ const theme = createTheme({
             <List>
               {friends.map((friend, index) => (
                 <ListItemButton key={index} onClick={() => handleFriendClick(friend.id)} style={friendId === friend.id ? { backgroundColor: theme.palette.primary.dark } : {}}>
-                  <ListItemText primary={`${friend.first_name} ${friend.last_name} ${unreadFriendsIds.includes(friend.id) && unreadChat ? '*' : ''}`} />
+                  <ListItemText primary={`${friend.first_name} ${friend.last_name}`} />
+                  {unreadFriendsIds.includes(friend.id) && unreadChat && <Circle color="error" style={{ width: '10px', height: '10px' }}/>}
                 </ListItemButton>
               ))}
             </List>
-            
+
+            <Button variant="contained" onClick={logout} style={{ bottom: '3%', position: 'absolute'}}>Logout</Button>
+
           </Box>
   
           {/* Chat Box */}
@@ -237,9 +244,16 @@ const theme = createTheme({
             <Typography variant="h6" gutterBottom>Chat</Typography>
             <Box flexGrow={1} bgcolor="white" p={2} borderRadius={2} overflow="auto">
               {chatMessages.map((messageData, index) => (
-                <Typography key={index} gutterBottom>
-                  {convertDateFormat(messageData.timestamp)} | {messageData.sender_name} :  {messageData.content}
-                </Typography>
+                <MessageBox
+                key={index}
+                message={messageData.content}
+                sender={messageData.sender_name}
+                timestamp={convertDateFormat(messageData.timestamp)}
+                isCurrentUser={messageData.sender === userData?.id}
+            />
+                // <Typography key={index} gutterBottom>
+                //   {convertDateFormat(messageData.timestamp)} | {messageData.sender_name} :  {messageData.content}
+                // </Typography>
               ))}
             </Box>
             <Box display="flex" mt={2}>
@@ -250,6 +264,8 @@ const theme = createTheme({
             </Box>
           </Box>
         </Box>
+
+       
   
         {/* Add Friend Dialog */}
         <Dialog open={openAddFriendModal} onClose={() => setOpenAddFriendModal(false)}>

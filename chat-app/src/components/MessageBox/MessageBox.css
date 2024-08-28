@@ -1,0 +1,51 @@
+/* MessageBox.css */
+.message-box {
+    display: flex;
+    margin: 10px;
+    max-width: 30%;
+    padding: 10px;
+    border-radius: 10px;
+    font-family: Arial, sans-serif;
+}
+
+.current-user {
+    background-color: #a64d79; /* Darker purple */
+    color: white;
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.other-user {
+    background-color: #d1a1d5; /* Lighter purple */
+    color: black;
+    align-self: flex-start;
+    margin-right: auto;
+}
+
+.message-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.message-timestamp {
+    font-size: 0.8em;
+    text-align: right;
+    margin-top: 5px;
+}
+
+.message-sender {
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    color: #5c2751; /* A slightly darker shade of purple for the sender's name */
+    border-bottom: 1px solid grey;
+    width: 100%;
+    padding-bottom: 2px;
+}
+
+.message-text {
+    margin-top: 4px;
+    margin-bottom: 5px;
+}
+
