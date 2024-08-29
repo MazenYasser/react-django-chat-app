@@ -159,50 +159,54 @@ const theme = createTheme({
 
     useEffect(() => {
       if (socket) {
-        // Close the existing WebSocket connection
         socket.close();
       }
     
       if (friendId && userData?.id) {
-        // Generate the room name dynamically
         const roomName = `private_${Math.min(userData.id, friendId)}_${Math.max(userData.id, friendId)}`;
         const token = sessionStorage.getItem('authorization');
-        // Create a new WebSocket connection
         const newSocket = new WebSocket(`ws://127.0.0.1:8000/chat/${roomName}/?token=${token}`);
         setSocket(newSocket);
     
-        // Handle the connection opening
         newSocket.onopen = async () => {
           console.log('WebSocket connected');
           const chatLog = await getChatLog(friendId);
           setChatMessages([]);
           setChatMessages(chatLog);
-          await markMessagesAsRead(friendId);
+          // Mark messages as read immediately upon connecting
+          newSocket.send(JSON.stringify({ "action": "mark_as_read", "friend_id": friendId }));
         };
     
-        // Listen for incoming messages
-        newSocket.onmessage = (event) => {
-          const messageData = JSON.parse(event.data)
-          console.log('Message from server:', messageData);
-          setChatMessages((prevMessages) => [...prevMessages, messageData.message]);
+        newSocket.onmessage = async (event) => {
+          const messageData = JSON.parse(event.data);
+          if (messageData.type === "chat_message") {
+            setChatMessages((prevMessages) => [...prevMessages, messageData.message]);
+          } else if (messageData.type === "read_receipt") {
+            const updatedMessages = chatMessages.map(message => {
+              if (message.sender === friendId) {
+                return { ...message, is_read: true };
+              }
+              return message;
+            });
+            setChatMessages(updatedMessages);
+          }
+          const chatLog = await getChatLog(friendId);
+          setChatMessages(chatLog);
         };
-
     
-        // Handle the connection closing
         newSocket.onclose = () => {
           console.log('WebSocket disconnected');
           setChatMessages([]);
         };
       }
     
-      // Cleanup the WebSocket when the component unmounts or when the friend changes
       return () => {
         if (socket) {
           socket.close();
         }
       };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [friendId, userData?.id]); // Depend on friendId and userData.id
+    }, [friendId, userData?.id]);
   
     return (
       <ThemeProvider theme={theme}>
@@ -261,11 +265,12 @@ const theme = createTheme({
                 sender={messageData.sender_name}
                 timestamp={convertDateFormat(messageData.timestamp)}
                 isCurrentUser={messageData.sender === userData?.id}
+                isRead={messageData.is_read}
             />
               ))}
             </Box>
             <Box display="flex" mt={2}>
-              <TextField value={newMessage} fullWidth variant="outlined" label="Type a message" onChange={(e) => setNewMessage(e.target.value)} />
+              <TextField value={newMessage} onFocus={() => markMessagesAsRead(friendId)} fullWidth variant="outlined" label="Type a message" onChange={(e) => setNewMessage(e.target.value)} />
               <IconButton color="primary"  onClick={sendMessage}>
                 <SendIcon />
               </IconButton>
